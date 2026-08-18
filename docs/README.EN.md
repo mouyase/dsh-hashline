@@ -43,18 +43,16 @@ Disable the default editor and register hashline in a cordis patch:
 
 ## Tool usage
 
-Tool name: `hashline`. Arguments:
+The plugin registers 6 independent tools, each with strongly validated required arguments:
 
-| Argument | Required for | Description |
+| Tool | Arguments | Description |
 |---|---|---|
-| `command` | always | `read` / `patch` / `write` / `remove` / `rename` / `find_block` |
-| `path` | always | Absolute file path |
-| `patch` | patch | hashline patch text (SWAP/DEL/INS.*/SWAP.BLK/...) |
-| `content` | write | Full file content to write |
-| `target` | rename | Destination path |
-| `anchor` | find_block | Line anchor such as `3` or `3:0e` |
-| `force` | write | Overwrite an existing file |
-| `dry_run` | patch | Preview the diff without writing |
+| `hashline_read` | `path` | Read a file with `[path#HASH]` snapshot header + numbered lines with per-line hashes |
+| `hashline_patch` | `path`, `patch`, `dry_run?` | Apply a hashline patch (SWAP/DEL/INS.*/SWAP.BLK/...) |
+| `hashline_write` | `path`, `content`, `force?` | Write full file content |
+| `hashline_remove` | `path` | Delete a file |
+| `hashline_rename` | `path`, `target` | Rename (move) a file |
+| `hashline_find_block` | `path`, `anchor` | Find the enclosing syntactic block at an anchor |
 
 Example patch text:
 

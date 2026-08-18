@@ -43,18 +43,16 @@ dsh plugin --profile web add dsh-hashline
 
 ## 工具用法
 
-工具名 `hashline`，参数：
+插件注册 6 个独立工具，每个工具的必填参数有强校验：
 
-| 参数 | 必填 | 说明 |
+| 工具 | 参数 | 说明 |
 |---|---|---|
-| `command` | 是 | `read` / `patch` / `write` / `remove` / `rename` / `find_block` |
-| `path` | 是 | 文件绝对路径 |
-| `patch` | patch | hashline patch 文本（SWAP/DEL/INS.*/SWAP.BLK/...） |
-| `content` | write | 写入的完整文件内容 |
-| `target` | rename | 目标路径 |
-| `anchor` | find_block | 行锚点，如 `3` 或 `3:0e` |
-| `force` | write | 覆盖已存在文件 |
-| `dry_run` | patch | 仅预览 diff，不写入 |
+| `hashline_read` | `path` | 读取文件，返回 `[path#HASH]` 快照头 + 带行哈希的编号行 |
+| `hashline_patch` | `path`, `patch`, `dry_run?` | 应用 hashline patch（SWAP/DEL/INS.*/SWAP.BLK/...） |
+| `hashline_write` | `path`, `content`, `force?` | 写入完整文件内容 |
+| `hashline_remove` | `path` | 删除文件 |
+| `hashline_rename` | `path`, `target` | 重命名（移动）文件 |
+| `hashline_find_block` | `path`, `anchor` | 查找行锚点所在的语法块 |
 
 示例 patch 文本：
 

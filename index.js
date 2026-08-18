@@ -1,7 +1,8 @@
 // dsh-hashline — 把 hashline 行寻址编辑器封装为 dsh 原生工具。
 //
 // 内嵌 hashline 二进制（bin/），npm 安装后即可直接调用，无需系统安装。
-// 工具名：hashline
+// 注册 6 个工具：hashline_read / hashline_patch / hashline_write /
+// hashline_remove / hashline_rename / hashline_find_block
 import z from '@deepseek-ai/schemastery'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { spawn } from 'node:child_process'
@@ -20,8 +21,6 @@ const Config = z.object({
   maxOutputChars: z.number().default(DEFAULT_MAX_OUTPUT_CHARS),
   timeoutMs: z.number().default(DEFAULT_TIMEOUT_MS),
 })
-
-const COMMANDS = ['read', 'patch', 'write', 'remove', 'rename', 'find_block']
 
 function platformBinaryName(platform, arch) {
   if (platform === 'darwin' && arch === 'arm64') return 'hashline-macos-arm64'
@@ -52,8 +51,8 @@ function resolveBinary(config) {
   return bundled
 }
 
-function buildArgs(args) {
-  switch (args.command) {
+function buildArgs(command, args) {
+  switch (command) {
     case 'read':
       return ['read', args.path]
     case 'patch':
@@ -67,7 +66,7 @@ function buildArgs(args) {
     case 'find_block':
       return ['find-block', args.path, args.anchor ?? '']
     default:
-      throw new Error(`dsh-hashline: unknown command ${args.command}`)
+      throw new Error(`dsh-hashline: unknown command ${command}`)
   }
 }
 
@@ -116,10 +115,10 @@ function truncate(text, maxChars) {
   return `${text.slice(0, maxChars)}\n... [truncated, ${text.length - maxChars} more chars]`
 }
 
-async function executeHashline(args, exec, config) {
+async function executeCommand(command, args, exec, config) {
   const binary = resolveBinary(config)
-  const cliArgs = buildArgs(args)
-  const stdinText = args.command === 'patch' ? (args.patch ?? '') : null
+  const cliArgs = buildArgs(command, args)
+  const stdinText = command === 'patch' ? (args.patch ?? '') : null
   const result = await runBinary(binary, cliArgs, stdinText, exec.signal, config.timeoutMs)
   const output = truncate(result.stdout, config.maxOutputChars)
   const stderr = result.stderr ? truncate(result.stderr, config.maxOutputChars) : ''
@@ -140,55 +139,92 @@ const output = {
   },
 }
 
-function apply(ctx, config) {
+const PATH_PARAM = {
+  type: 'string',
+  required: true,
+  description: 'Absolute path of the file to operate on.',
+}
+
+function registerTool(ctx, config, toolName, description, parameters, command) {
   ctx.tools.register(defineTool({
-    name: 'hashline',
-    description:
-      'Line-addressed file editor backed by the hashline CLI. ' +
-      'Use `read` to read a file with stable line anchors, then `patch` to edit it with SWAP/DEL/INS operations keyed by line numbers. ' +
-      'Commands: read, patch, write, remove, rename, find_block.',
-    parameters: {
-      command: {
-        type: 'string',
-        required: true,
-        description: `One of: ${COMMANDS.join(', ')}`,
-      },
-      path: {
-        type: 'string',
-        required: true,
-        description: 'Absolute path of the file to operate on.',
-      },
-      patch: {
-        type: 'string',
-        description: 'For patch: the hashline patch text (SWAP/DEL/INS.*/SWAP.BLK/...).',
-      },
-      content: {
-        type: 'string',
-        description: 'For write: the full file content to write.',
-      },
-      target: {
-        type: 'string',
-        description: 'For rename: the destination path.',
-      },
-      anchor: {
-        type: 'string',
-        description: 'For find_block: a line anchor like "3" or "3:0e".',
-      },
-      force: {
-        type: 'boolean',
-        description: 'For write: overwrite an existing file.',
-      },
-      dry_run: {
-        type: 'boolean',
-        description: 'For patch: preview the diff without writing.',
-      },
-    },
+    name: toolName,
+    description,
+    parameters,
     output,
     timeoutMs: config.timeoutMs,
     isConcurrencySafe: () => true,
-    execute: (args, exec) => executeHashline(args, exec, config),
+    execute: (args, exec) => executeCommand(command, args, exec, config),
   }))
-  process.stderr.write('[dsh-hashline] registered tool hashline\n')
+}
+
+function apply(ctx, config) {
+  registerTool(ctx, config, 'hashline_read',
+    'Read a file with hashline snapshot format: [path#HASH] header + numbered lines with per-line hashes. Use before editing to get stable line anchors.',
+    { path: PATH_PARAM },
+    'read')
+
+  registerTool(ctx, config, 'hashline_patch',
+    'Apply a hashline patch to a file. Patch operations: SWAP N(:..M), DEL N(:..M), INS.PRE N, INS.POST N, INS.HEAD, INS.TAIL, SWAP.BLK N, DEL.BLK N, INS.BLK.POST N. Each operation line starts with the op, followed by lines prefixed with "+".',
+    {
+      path: PATH_PARAM,
+      patch: {
+        type: 'string',
+        required: true,
+        description: 'The hashline patch text, e.g. "SWAP 2:\\n+new second line".',
+      },
+      dry_run: {
+        type: 'boolean',
+        description: 'Preview the diff without writing.',
+      },
+    },
+    'patch')
+
+  registerTool(ctx, config, 'hashline_write',
+    'Write full content to a file. Creates a new file, or overwrites an existing file when force is true.',
+    {
+      path: PATH_PARAM,
+      content: {
+        type: 'string',
+        required: true,
+        description: 'The full file content to write.',
+      },
+      force: {
+        type: 'boolean',
+        description: 'Overwrite the file if it already exists.',
+      },
+    },
+    'write')
+
+  registerTool(ctx, config, 'hashline_remove',
+    'Delete a file entirely.',
+    { path: PATH_PARAM },
+    'remove')
+
+  registerTool(ctx, config, 'hashline_rename',
+    'Rename (move) a file.',
+    {
+      path: PATH_PARAM,
+      target: {
+        type: 'string',
+        required: true,
+        description: 'Destination path.',
+      },
+    },
+    'rename')
+
+  registerTool(ctx, config, 'hashline_find_block',
+    'Find the enclosing syntactic block (brace/indent/ruby) around a line anchor.',
+    {
+      path: PATH_PARAM,
+      anchor: {
+        type: 'string',
+        required: true,
+        description: 'Line anchor like "3" or "3:0e".',
+      },
+    },
+    'find_block')
+
+  process.stderr.write('[dsh-hashline] registered 6 tools: hashline_read/patch/write/remove/rename/find_block\n')
 }
 
 export { Config, apply, inject, name }
