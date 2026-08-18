@@ -1,0 +1,31 @@
+{
+  "name": "dsh-hashline",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "index.js",
+  "description": "dsh plugin wrapping hashline line-addressed editor as a native tool, with bundled binaries",
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "hashline",
+    "editor",
+    "file-editing",
+    "plugin"
+  ],
+  "files": [
+    "index.js",
+    "bin/",
+    "README.md",
+    "docs/README.EN.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mouyase/dsh-hashline.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mouyase/dsh-hashline/issues"
+  },
+  "homepage": "https://github.com/mouyase/dsh-hashline#readme"
+}
