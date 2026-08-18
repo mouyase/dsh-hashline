@@ -79,7 +79,7 @@ INS.TAIL:
 
 ## 二进制来源
 
-内嵌二进制来自 [hashline releases v0.8.6](https://github.com/quangdang46/hashline/releases/tag/v0.8.6)。
+内嵌二进制来自 [hashline releases v0.9.12](https://github.com/quangdang46/hashline/releases/tag/v0.9.12)。
 
 ## 许可
 

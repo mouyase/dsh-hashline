@@ -79,7 +79,7 @@ INS.TAIL:
 
 ## Binary source
 
-Bundled binaries come from [hashline releases v0.8.6](https://github.com/quangdang46/hashline/releases/tag/v0.8.6).
+Bundled binaries come from [hashline releases v0.9.12](https://github.com/quangdang46/hashline/releases/tag/v0.9.12).
 
 ## License
 
